@@ -7,10 +7,8 @@ var PORT = '3001';
 var TIMER_INTERVAL = 100;
 var STEP_SIZE = 4;
 
-var EVENT_ONE_FINGER_LEFT = 'one_finger_left';
-var EVENT_ONE_FINGER_RIGHT = 'one_finger_right';
-var EVENT_TWO_FINGERS_LEFT = 'two_fingers_left';
-var EVENT_TWO_FINGERS_RIGHT = 'two_fingers_right';
+var DIRECTION_LEFT = "left";
+var DIRECTION_RIGHT = "right";
 
 var fingerCount = 0;
 var angles = [0, 0];
@@ -53,13 +51,13 @@ Cylon.robot({
 				timer = Date.now();
 
 				var id = my.getIdByFingerCount();
-				my.calculateAndSetAngle(gesture, id);
+				var direction = my.calculateAndSetAngle(gesture, id);
 				var angle = my.addLeadingZerosForLength(angles[id], 3);
 
 				var message = fingerCount + angle;
 				if (message !== previous) {
 					my.sendMessage(message);
-					console.log("" + fingerCount + " finger(s) moving in a " + gesture.type + " (" + message + ")");
+					console.log("Je beweegt nu " + fingerCount + " vinger" + (fingerCount > 1 ? "s" : "") + " in een " + (gesture.type == "circle" ? "cirkel" : gesture.type) + " naar " + (direction == DIRECTION_LEFT ? "links" : "rechts") + " (" + message + ")");
 					previous = message;
 				}
 			}
@@ -68,7 +66,9 @@ Cylon.robot({
 
 	calculateAndSetAngle: function(gesture, id) {
 		var angle = angles[id];
+		var direction = DIRECTION_RIGHT;
 		if (gesture.normal[2] > 0) {
+			direction = DIRECTION_LEFT;
 			if (angle > 0) {
 				angle = angle - STEP_SIZE;
 			}
@@ -78,6 +78,7 @@ Cylon.robot({
 			}
 		}
 		angles[id] = angle;
+		return direction;
 	},
 
 	getIdByFingerCount: function() {
