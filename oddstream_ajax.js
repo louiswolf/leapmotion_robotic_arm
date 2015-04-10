@@ -1,9 +1,11 @@
-'use strict';
+(function () { 'use strict'; }());
 
 var Cylon = require('cylon');
 
 var IP = '10.2.2.35';
 var PORT = '3001';
+var TIMER_INTERVAL = 100;
+var STEP_SIZE = 4;
 
 var EVENT_ONE_FINGER_LEFT = 'one_finger_left';
 var EVENT_ONE_FINGER_RIGHT = 'one_finger_right';
@@ -11,6 +13,21 @@ var EVENT_TWO_FINGERS_LEFT = 'two_fingers_left';
 var EVENT_TWO_FINGERS_RIGHT = 'two_fingers_right';
 
 var fingerCount = 0;
+var angles = [0, 0];
+var previous = '0000';
+var timer = 0;
+var time = 0;
+
+function sendMessage(message) {
+	var XMLHttpRequest = require('./XMLHttpRequest.js').XMLHttpRequest;
+	var xhr = new XMLHttpRequest();
+
+	xhr.open('GET', 'http://' + IP + ':' + PORT + '/' + message, true);
+	xhr.send();
+}
+
+sendMessage("1000");
+sendMessage("2000");
 
 Cylon.robot({
 	name: 'oddstream',
@@ -20,56 +37,102 @@ Cylon.robot({
 	},
 
 	devices: {
-	    leapmotion: { driver: 'leapmotion', connection: 'leapmotion' }
+		leapmotion: { driver: 'leapmotion', connection: 'leapmotion' }
 	},
 
 	work: function(my) {
 
-	    my.leapmotion.on('hand', function(hand) {
-	       
-	        var handOpen = !!hand.fingers.filter(function(f) {
-	          return f.extended;
-	        }).length;
+		my.leapmotion.on('hand', function(hand) {
+			fingerCount = my.countFingersOn(hand);
+		});
 
-	        var count = 0;
-	        if (handOpen) {
-	          count = hand.fingers.filter(function(f) {
-	            return f.extended;
-	          }).length;
-	        }
+		my.leapmotion.on('gesture', function(gesture) {
 
-	        fingerCount = count;
-	    });
+			if (my.isAreRequirementsMet(my, gesture)) {
 
-	    my.leapmotion.on('gesture', function(gesture) {
+				timer = Date.now();
 
-	      if (gesture.type == 'circle' && (fingerCount == 1 || fingerCount == 2)) {
+				var id = my.getIdByFingerCount();
+				my.calculateAndSetAngle(gesture, id);
+				var angle = my.addLeadingZerosForLength(angles[id], 3);
 
-	        var fingerEvent = '';
-	        if (gesture.normal[2] > 0) {
+				var message = fingerCount + angle;
+				if (message !== previous) {
+					my.sendMessage(message);
+					console.log("" + fingerCount + " finger(s) moving in a " + gesture.type + " (" + message + ")");
+					previous = message;
+				}
+			}
+		});
+	},
 
-	            fingerEvent = EVENT_ONE_FINGER_LEFT;
-	            if (fingerCount == 2) {
-	            	fingerEvent = EVENT_TWO_FINGERS_LEFT;
-	            }
-	        } else {
+	calculateAndSetAngle: function(gesture, id) {
+		var angle = angles[id];
+		if (gesture.normal[2] > 0) {
+			if (angle > 0) {
+				angle = angle - STEP_SIZE;
+			}
+		} else {
+			if (angle < 180) {
+				angle = angle + STEP_SIZE;
+			}
+		}
+		angles[id] = angle;
+	},
 
-	          fingerEvent = EVENT_ONE_FINGER_RIGHT;
-	          if (fingerCount == 2) {
-	          	fingerEvent = EVENT_TWO_FINGERS_RIGHT;
-	          }
-	        }
-	        
-			var XMLHttpRequest = require('./XMLHttpRequest.js').XMLHttpRequest;
-			var xhr = new XMLHttpRequest();
-	    
-	        xhr.open('GET', 'http://' + IP + ':' + PORT + '/' + fingerEvent, true);
-	        xhr.send();
+	getIdByFingerCount: function() {
+		var angleId = 0;
+		if (fingerCount == 2) {
+			angleId = 1;
+		}
+		return angleId;
+	},
 
-	        console.log("" + fingerCount + " finger(s) moving in a " + gesture.type + " (" + fingerEvent + ")");
-	      }
-	    });
+	isAreRequirementsMet: function(my, gesture) {
+		return my.isSurpassedInterval() && my.isGestureCircle(gesture) && my.isValidFingerCount();
+	},
 
+	isSurpassedInterval: function() {
+		return (Date.now() - timer > TIMER_INTERVAL);
+	},
+
+	isGestureCircle: function(gesture) {
+		return gesture.type === 'circle';
+	},
+
+	isValidFingerCount: function() {
+		return (fingerCount == 1 || fingerCount == 2);
+	},
+
+	countFingersOn: function(hand) {
+		var handOpen = !!hand.fingers.filter(function(f) {
+			return f.extended;
+		}).length;
+
+		var count = 0;
+		if (handOpen) {
+			count = hand.fingers.filter(function(f) {
+				return f.extended;
+			}).length;
+		}
+
+		return count;
+	},
+
+	addLeadingZerosForLength: function(angle, length) {
+		var angleString = "" + angle;
+		while (angleString.length < length) {
+			angleString = "0" + angleString;
+		}
+		return angleString;
+	},
+
+	sendMessage: function(message) {
+		var XMLHttpRequest = require('./XMLHttpRequest.js').XMLHttpRequest;
+		var xhr = new XMLHttpRequest();
+
+		xhr.open('GET', 'http://' + IP + ':' + PORT + '/' + message, true);
+		xhr.send();
 	}
 });
 
