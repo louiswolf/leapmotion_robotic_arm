@@ -2,7 +2,7 @@
 
 var Cylon = require('cylon');
 
-var IP = ''//'10.2.2.35';
+var IP = ''; //'10.2.2.35';
 var URL = 'www.stayhelp.com/mobile/smeltudp.php?v=';
 var PORT = ''; //'3001';
 var TIMER_INTERVAL = 100;
@@ -26,6 +26,7 @@ function sendMessage(message) {
 	xhr.send();
 }
 
+sendMessage("0000");
 sendMessage("1000");
 sendMessage("2000");
 
@@ -57,8 +58,15 @@ Cylon.robot({
 				var angle = my.addLeadingZerosForLength(angles[id], 3);
 
 				var message = fingerCount + angle;
+				if (message == '1180' || message === '2180') {
+					console.log(message + ': uiterste stand bereikt. Draai je vinger' + (message === '2180' ? 's' : '') + ' nu tegen de klok in.');
+				}
+				if (message == '1000' || message === '2000') {
+					console.log(message + ': beginstand bereikt. Draai je vinger' + (message === '2000' ? 's' : '') + ' nu met de klok mee.');
+				}
+				
 				if (message !== previous) {
-					my.sendMessage(message);
+					sendMessage(message);
 					console.log("Je beweegt nu " + fingerCount + " vinger" + (fingerCount > 1 ? "s" : "") + " in een " + (gesture.type == "circle" ? "cirkel" : gesture.type) + " naar " + (direction == DIRECTION_LEFT ? "links" : "rechts") + " (" + message + ")");
 					previous = message;
 				}
@@ -128,14 +136,6 @@ Cylon.robot({
 			angleString = "0" + angleString;
 		}
 		return angleString;
-	},
-
-	sendMessage: function(message) {
-		var XMLHttpRequest = require('./XMLHttpRequest.js').XMLHttpRequest;
-		var xhr = new XMLHttpRequest();
-
-		xhr.open('GET', 'http://' + IP + ':' + PORT + '/' + message, true);
-		xhr.send();
 	}
 });
 
