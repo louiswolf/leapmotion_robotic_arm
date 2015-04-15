@@ -2,8 +2,9 @@
 
 var Cylon = require('cylon');
 
-var IP = '10.2.2.35';
-var PORT = '3001';
+var IP = ''//'10.2.2.35';
+var URL = 'www.stayhelp.com/mobile/smeltudp.php?v=';
+var PORT = ''; //'3001';
 var TIMER_INTERVAL = 100;
 var STEP_SIZE = 4;
 
@@ -22,7 +23,8 @@ function sendMessage(message) {
 	var XMLHttpRequest = require('./XMLHttpRequest.js').XMLHttpRequest;
 	var xhr = new XMLHttpRequest();
 
-	xhr.open('GET', 'http://' + IP + ':' + PORT + '/' + message, true);
+	xhr.open('GET', 'http://' + URL + message, true);
+	//xhr.open('GET', 'http://' + IP + ':' + PORT + '/' + message, true);
 	xhr.send();
 }
 
